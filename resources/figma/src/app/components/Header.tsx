@@ -7,7 +7,7 @@ export function Header() {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between py-4">
           <Link to="/" className="text-2xl font-bold text-pink-600">
-            Luxe Fashion Khang
+            Luxe Fashion
           </Link>
 
           <div className="flex-1 max-w-xl mx-8">
