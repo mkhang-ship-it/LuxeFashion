@@ -1,6 +1,33 @@
 import { MapPin, Phone, Mail, Clock, Facebook, Twitter, Instagram, Linkedin } from "lucide-react";
+import { FormEvent, useState } from "react";
 
 export function ContactPage() {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [subject, setSubject] = useState("");
+  const [message, setMessage] = useState("");
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+
+    if (!name.trim() || !subject.trim() || !message.trim()) {
+      alert("Please fill all required fields.");
+      return;
+    }
+
+    const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    if (!isEmailValid) {
+      alert("Please enter a valid email.");
+      return;
+    }
+
+    alert("Message sent successfully (demo mode).");
+    setName("");
+    setEmail("");
+    setSubject("");
+    setMessage("");
+  };
+
   return (
     <div className="bg-gray-50 py-12">
       <div className="container mx-auto px-4">
@@ -14,13 +41,15 @@ export function ContactPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
           <div className="bg-white rounded-lg shadow-md p-8">
             <h2 className="text-2xl font-bold mb-6">Send us a message</h2>
-            <form className="space-y-4">
+            <form className="space-y-4" onSubmit={handleSubmit}>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Name
                 </label>
                 <input
                   type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
                   placeholder="Your full name"
                 />
@@ -31,6 +60,8 @@ export function ContactPage() {
                 </label>
                 <input
                   type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
                   placeholder="your.email@example.com"
                 />
@@ -41,6 +72,8 @@ export function ContactPage() {
                 </label>
                 <input
                   type="text"
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
                   placeholder="How can we help?"
                 />
@@ -51,6 +84,8 @@ export function ContactPage() {
                 </label>
                 <textarea
                   rows={5}
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
                   placeholder="Your message here..."
                 ></textarea>

@@ -1,15 +1,10 @@
 import { Star, Heart } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { addToCart, addToWishlist, getWishlist, getProducts, removeFromWishlist, type Product } from "../services/api";
 
-const categories = [
-  { name: "Dresses", icon: "👗", color: "bg-pink-100" },
-  { name: "Tops & Blouses", icon: "👚", color: "bg-purple-100" },
-  { name: "Bottoms", icon: "👖", color: "bg-blue-100" },
-  { name: "Outerwear", icon: "🧥", color: "bg-indigo-100" },
-  { name: "Accessories", icon: "👜", color: "bg-rose-100" },
-  { name: "Shoes", icon: "👠", color: "bg-fuchsia-100" },
-];
 
-const products = [
+const featuredProducts: Product[] = [
   {
     id: 1,
     name: "Elegant Floral Maxi Dress",
@@ -77,6 +72,71 @@ const products = [
 ];
 
 export function HomePage() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const [products, setProducts] = useState<Product[]>(featuredProducts);
+  const [wishlistIds, setWishlistIds] = useState<number[]>([]);
+  const query = (searchParams.get("q") || "").trim().toLowerCase();
+  const visibleProducts = query
+    ? products.filter((product) => product.name.toLowerCase().includes(query))
+    : products;
+
+  const handleAddToCart = async (productId: number) => {
+    try {
+      await addToCart(productId, 1);
+      alert("Added to cart successfully.");
+    } catch {
+      alert("Cannot add to cart right now.");
+    }
+  };
+
+  const handleToggleWishlist = async (productId: number) => {
+    if (!localStorage.getItem("auth_token")) {
+      navigate("/login");
+      return;
+    }
+
+    try {
+      if (wishlistIds.includes(productId)) {
+        await removeFromWishlist(productId);
+        setWishlistIds((prev) => prev.filter((id) => id !== productId));
+      } else {
+        await addToWishlist(productId);
+        setWishlistIds((prev) => [...prev, productId]);
+      }
+    } catch {
+      alert("Cannot update wishlist right now.");
+    }
+  };
+
+  useEffect(() => {
+    getProducts()
+      .then((apiProducts) => {
+        const normalizedProducts = apiProducts.map((product, index) => ({
+          ...product,
+          image: product.image || featuredProducts[index % featuredProducts.length]?.image,
+          rating: product.rating ?? featuredProducts[index % featuredProducts.length]?.rating ?? 4.5,
+          reviews: product.reviews ?? featuredProducts[index % featuredProducts.length]?.reviews ?? 0,
+        }));
+
+        setProducts(normalizedProducts.length > 0 ? normalizedProducts : featuredProducts);
+      })
+      .catch(() => {
+        // keep showing featuredProducts if API fails
+      });
+  }, [])
+
+  useEffect(() => {
+    if (!localStorage.getItem("auth_token")) {
+      setWishlistIds([]);
+      return;
+    }
+
+    getWishlist()
+      .then((items) => setWishlistIds(items.map((item) => item.product_id)))
+      .catch(() => setWishlistIds([]));
+  }, []);
+
   return (
     <div>
       <section className="bg-gradient-to-r from-pink-600 to-rose-600 text-white">
@@ -96,41 +156,35 @@ export function HomePage() {
       </section>
 
       <section className="container mx-auto px-4 py-12">
-        <h2 className="text-2xl font-bold mb-6">Shop by Category</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {categories.map((category) => (
-            <button
-              key={category.name}
-              className={`${category.color} rounded-lg p-6 text-center hover:shadow-lg transition-shadow`}
-            >
-              <div className="text-4xl mb-2">{category.icon}</div>
-              <div className="font-medium text-gray-800">{category.name}</div>
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <section className="container mx-auto px-4 py-12">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold">Featured Products</h2>
+          <h2 className="text-2xl font-bold">
+            {query ? `Search Results for "${searchParams.get("q")}"` : "Featured Products"}
+          </h2>
           <button className="text-pink-600 font-medium hover:underline">
             View All
           </button>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {products.map((product) => (
-            <div
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+          {visibleProducts.map((product, index) => (
+            <article
               key={product.id}
               className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow group"
             >
               <div className="relative overflow-hidden">
                 <img
-                  src={product.image}
+                  src={product.image || featuredProducts[index % featuredProducts.length]?.image}
                   alt={product.name}
+                  onError={(e) => {
+                    e.currentTarget.src = featuredProducts[index % featuredProducts.length]?.image || "";
+                  }}
                   className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-300"
                 />
-                <button className="absolute top-3 right-3 bg-white rounded-full p-2 shadow-md hover:bg-gray-100">
-                  <Heart className="w-5 h-5 text-gray-600" />
+                <button
+                  type="button"
+                  onClick={() => handleToggleWishlist(product.id)}
+                  className="absolute top-3 right-3 bg-white rounded-full p-2 shadow-md hover:bg-gray-100"
+                >
+                  <Heart className={`w-5 h-5 ${wishlistIds.includes(product.id) ? "fill-pink-600 text-pink-600" : "text-gray-600"}`} />
                 </button>
               </div>
               <div className="p-4">
@@ -152,37 +206,23 @@ export function HomePage() {
                   <span className="text-xl font-bold text-pink-600">
                     ${product.price}
                   </span>
-                  <button className="bg-pink-600 text-white px-4 py-2 rounded-lg hover:bg-pink-700 transition-colors">
+                  <button
+                    type="button"
+                    onClick={() => handleAddToCart(product.id)}
+                    className="bg-pink-600 text-white px-4 py-2 rounded-lg hover:bg-pink-700 transition-colors"
+                  >
                     Add to Cart
                   </button>
                 </div>
               </div>
-            </div>
+            </article>
           ))}
         </div>
+        {visibleProducts.length === 0 && (
+          <p className="text-gray-600 mt-6">No products found for your keyword.</p>
+        )}
       </section>
 
-      <section className="bg-gray-100 py-12">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-            <div>
-              <div className="text-4xl mb-4">🚚</div>
-              <h3 className="font-bold text-lg mb-2">Free Shipping</h3>
-              <p className="text-gray-600">On orders over $50</p>
-            </div>
-            <div>
-              <div className="text-4xl mb-4">🔒</div>
-              <h3 className="font-bold text-lg mb-2">Secure Payment</h3>
-              <p className="text-gray-600">100% secure transactions</p>
-            </div>
-            <div>
-              <div className="text-4xl mb-4">🔄</div>
-              <h3 className="font-bold text-lg mb-2">Easy Returns</h3>
-              <p className="text-gray-600">30-day return policy</p>
-            </div>
-          </div>
-        </div>
-      </section>
     </div>
   );
 }

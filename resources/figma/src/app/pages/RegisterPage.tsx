@@ -1,9 +1,17 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { User, Mail, Phone, Lock } from "lucide-react";
-import { useState } from "react";
+import { FormEvent, useState } from "react";
+import { register } from "../services/api";
 
 export function RegisterPage() {
+  const navigate = useNavigate();
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const getPasswordStrength = (pwd: string) => {
     if (pwd.length === 0) return { strength: 0, label: "", color: "" };
@@ -17,6 +25,57 @@ export function RegisterPage() {
 
   const passwordStrength = getPasswordStrength(password);
 
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    const nextErrors: Record<string, string> = {};
+
+    if (fullName.trim().split(/\s+/).length < 2) {
+      nextErrors.fullName = "Please enter full name (at least 2 words).";
+    }
+
+    const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    if (!isEmailValid) {
+      nextErrors.email = "Please enter a valid email.";
+    }
+
+    const onlyDigitsPhone = phone.replace(/\D/g, "");
+    if (onlyDigitsPhone.length < 10 || onlyDigitsPhone.length > 11) {
+      nextErrors.phone = "Phone number must be 10-11 digits.";
+    }
+
+    if (password.length < 8 || !/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
+      nextErrors.password = "Min 8 chars, include uppercase and number.";
+    }
+
+    if (password !== confirmPassword) {
+      nextErrors.confirmPassword = "Confirm password must match.";
+    }
+
+    if (!acceptedTerms) {
+      nextErrors.terms = "Please accept Terms & Conditions.";
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
+      return;
+    }
+
+    setErrors({});
+    try {
+      await register({
+        full_name: fullName,
+        email,
+        phone,
+        password,
+      });
+      navigate("/login");
+    } catch (error) {
+      setErrors({
+        form: error instanceof Error ? error.message : "Register failed.",
+      });
+    }
+  };
+
   return (
     <div className="bg-gray-50 py-12 min-h-screen flex items-center">
       <div className="container mx-auto px-4">
@@ -26,7 +85,7 @@ export function RegisterPage() {
             <p className="text-gray-600">Join us and start shopping today</p>
           </div>
 
-          <form className="space-y-4">
+          <form className="space-y-4" onSubmit={handleSubmit}>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Full Name
@@ -35,12 +94,14 @@ export function RegisterPage() {
                 <User className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
                 <input
                   type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
                   placeholder="John Doe"
                 />
               </div>
-              <p className="text-xs text-gray-500 mt-1">
-                JS Validation: Required, minimum 2 words
+              <p className={`text-xs mt-1 ${errors.fullName ? "text-red-600" : "text-gray-500"}`}>
+                {errors.fullName || "JS Validation: Required, minimum 2 words"}
               </p>
             </div>
 
@@ -52,12 +113,14 @@ export function RegisterPage() {
                 <Mail className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
                 <input
                   type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
                   placeholder="your.email@example.com"
                 />
               </div>
-              <p className="text-xs text-gray-500 mt-1">
-                JS Validation: Valid email format, check if already exists
+              <p className={`text-xs mt-1 ${errors.email ? "text-red-600" : "text-gray-500"}`}>
+                {errors.email || "JS Validation: Valid email format"}
               </p>
             </div>
 
@@ -69,12 +132,14 @@ export function RegisterPage() {
                 <Phone className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
                 <input
                   type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
                   placeholder="+84 123 456 789"
                 />
               </div>
-              <p className="text-xs text-gray-500 mt-1">
-                JS Validation: Valid phone format (10-11 digits)
+              <p className={`text-xs mt-1 ${errors.phone ? "text-red-600" : "text-gray-500"}`}>
+                {errors.phone || "JS Validation: Valid phone format (10-11 digits)"}
               </p>
             </div>
 
@@ -105,8 +170,8 @@ export function RegisterPage() {
                   </div>
                 </div>
               )}
-              <p className="text-xs text-gray-500 mt-1">
-                JS Validation: Minimum 8 characters, include uppercase, number
+              <p className={`text-xs mt-1 ${errors.password ? "text-red-600" : "text-gray-500"}`}>
+                {errors.password || "JS Validation: Minimum 8 characters"}
               </p>
             </div>
 
@@ -118,12 +183,14 @@ export function RegisterPage() {
                 <Lock className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
                 <input
                   type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
                   placeholder="Re-enter your password"
                 />
               </div>
-              <p className="text-xs text-gray-500 mt-1">
-                JS Validation: Must match password field
+              <p className={`text-xs mt-1 ${errors.confirmPassword ? "text-red-600" : "text-gray-500"}`}>
+                {errors.confirmPassword || "JS Validation: Must match password field"}
               </p>
             </div>
 
@@ -131,19 +198,22 @@ export function RegisterPage() {
               <label className="flex items-start gap-2">
                 <input
                   type="checkbox"
+                  checked={acceptedTerms}
+                  onChange={(e) => setAcceptedTerms(e.target.checked)}
                   className="w-4 h-4 text-pink-600 border-gray-300 rounded focus:ring-pink-500 mt-1"
                 />
                 <span className="text-sm text-gray-700">
                   I agree to the{" "}
-                  <a href="#" className="text-pink-600 hover:underline">
+                  <button type="button" className="text-pink-600 hover:underline">
                     Terms & Conditions
-                  </a>{" "}
+                  </button>{" "}
                   and{" "}
-                  <a href="#" className="text-pink-600 hover:underline">
+                  <button type="button" className="text-pink-600 hover:underline">
                     Privacy Policy
-                  </a>
+                  </button>
                 </span>
               </label>
+              {errors.terms && <p className="text-xs text-red-600 mt-1">{errors.terms}</p>}
             </div>
 
             <button
@@ -152,6 +222,7 @@ export function RegisterPage() {
             >
               Create Account
             </button>
+            {errors.form && <p className="text-sm text-red-600">{errors.form}</p>}
           </form>
 
           <div className="mt-6 text-center">

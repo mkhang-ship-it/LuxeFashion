@@ -1,7 +1,43 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Mail, Lock } from "lucide-react";
+import { FormEvent, useState } from "react";
+import { login } from "../services/api";
 
 export function LoginPage() {
+  const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [errors, setErrors] = useState<{ email?: string; password?: string; form?: string }>({});
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    const nextErrors: { email?: string; password?: string; form?: string } = {};
+
+    const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    if (!isEmailValid) {
+      nextErrors.email = "Please enter a valid email format.";
+    }
+
+    if (password.trim().length === 0) {
+      nextErrors.password = "Password is required.";
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
+      return;
+    }
+
+    setErrors({});
+    try {
+      await login({ email, password });
+      navigate("/profile");
+    } catch (error) {
+      setErrors({
+        form: error instanceof Error ? error.message : "Login failed.",
+      });
+    }
+  };
+
   return (
     <div className="bg-gray-50 py-12 min-h-screen flex items-center">
       <div className="container mx-auto px-4">
@@ -11,7 +47,7 @@ export function LoginPage() {
             <p className="text-gray-600">Login to your account to continue</p>
           </div>
 
-          <form className="space-y-4">
+          <form className="space-y-4" onSubmit={handleSubmit}>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Email Address
@@ -20,13 +56,19 @@ export function LoginPage() {
                 <Mail className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
                 <input
                   type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
                   placeholder="your.email@example.com"
                 />
               </div>
-              <p className="text-xs text-gray-500 mt-1">
-                JS Validation: Must be a valid email format
-              </p>
+              {errors.email ? (
+                <p className="text-xs text-red-600 mt-1">{errors.email}</p>
+              ) : (
+                <p className="text-xs text-gray-500 mt-1">
+                  JS Validation: Must be a valid email format
+                </p>
+              )}
             </div>
 
             <div>
@@ -37,13 +79,19 @@ export function LoginPage() {
                 <Lock className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
                 <input
                   type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
                   placeholder="Enter your password"
                 />
               </div>
-              <p className="text-xs text-gray-500 mt-1">
-                JS Validation: Required field, minimum 6 characters
-              </p>
+              {errors.password ? (
+                <p className="text-xs text-red-600 mt-1">{errors.password}</p>
+              ) : (
+                <p className="text-xs text-gray-500 mt-1">
+                  JS Validation: Required field
+                </p>
+              )}
             </div>
 
             <div className="flex items-center justify-between">
@@ -54,9 +102,9 @@ export function LoginPage() {
                 />
                 <span className="ml-2 text-sm text-gray-700">Remember me</span>
               </label>
-              <a href="#" className="text-sm text-pink-600 hover:underline">
+              <button type="button" className="text-sm text-pink-600 hover:underline">
                 Forgot password?
-              </a>
+              </button>
             </div>
 
             <button
@@ -65,6 +113,7 @@ export function LoginPage() {
             >
               Login
             </button>
+            {errors.form && <p className="text-sm text-red-600">{errors.form}</p>}
           </form>
 
           <div className="mt-6 text-center">
@@ -74,28 +123,6 @@ export function LoginPage() {
                 Register here
               </Link>
             </p>
-          </div>
-
-          <div className="mt-8 pt-6 border-t border-gray-200">
-            <p className="text-center text-gray-600 mb-4">Or login with</p>
-            <div className="grid grid-cols-2 gap-4">
-              <button className="flex items-center justify-center gap-2 border border-gray-300 rounded-lg py-2 hover:bg-gray-50 transition-colors">
-                <img
-                  src="https://www.google.com/favicon.ico"
-                  alt="Google"
-                  className="w-5 h-5"
-                />
-                <span className="text-sm font-medium">Google</span>
-              </button>
-              <button className="flex items-center justify-center gap-2 border border-gray-300 rounded-lg py-2 hover:bg-gray-50 transition-colors">
-                <img
-                  src="https://www.facebook.com/favicon.ico"
-                  alt="Facebook"
-                  className="w-5 h-5"
-                />
-                <span className="text-sm font-medium">Facebook</span>
-              </button>
-            </div>
           </div>
         </div>
       </div>

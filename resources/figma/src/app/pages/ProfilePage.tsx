@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { User, Package, Heart, MapPin, Shield, LogOut } from "lucide-react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { getOrders, getProfile, getWishlist, logout, removeFromWishlist, type OrderSummary, type WishlistItem, updateProfile } from "../services/api";
 
 const menuItems = [
   { id: "profile", label: "My Profile", icon: User },
@@ -11,7 +13,81 @@ const menuItems = [
 ];
 
 export function ProfilePage() {
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState("profile");
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [orders, setOrders] = useState<OrderSummary[]>([]);
+  const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
+
+  const splitName = useMemo(() => fullName.trim().split(/\s+/), [fullName]);
+  const firstName = splitName[0] || "";
+  const lastName = splitName.slice(1).join(" ");
+
+  useEffect(() => {
+    const requestedTab = searchParams.get("tab");
+    const isValidTab = menuItems.some((item) => item.id === requestedTab && item.id !== "logout");
+    setActiveTab(isValidTab && requestedTab ? requestedTab : "profile");
+  }, [searchParams]);
+
+  useEffect(() => {
+    getProfile()
+      .then((profile) => {
+        setFullName(profile.full_name);
+        setEmail(profile.email);
+        setPhone(profile.phone);
+      })
+      .catch(() => {
+        navigate("/login");
+      });
+  }, [navigate]);
+
+  useEffect(() => {
+    if (activeTab !== "orders") return;
+
+    getOrders()
+      .then(setOrders)
+      .catch(() => {
+        setOrders([]);
+      });
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab !== "wishlist") return;
+
+    getWishlist()
+      .then(setWishlistItems)
+      .catch(() => {
+        setWishlistItems([]);
+      });
+  }, [activeTab]);
+
+  const handleMenuClick = (id: string) => {
+    if (id === "logout") {
+      logout().finally(() => {
+        alert("Logged out.");
+        navigate("/login");
+      });
+      return;
+    }
+
+    setSearchParams({ tab: id });
+  };
+
+  const handleSaveProfile = async (e: FormEvent) => {
+    e.preventDefault();
+    try {
+      const updated = await updateProfile({ full_name: fullName, phone });
+      setFullName(updated.full_name);
+      setEmail(updated.email);
+      setPhone(updated.phone);
+      alert("Profile saved successfully.");
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Save failed.");
+    }
+  };
 
   return (
     <div className="bg-gray-50 py-12 min-h-screen">
@@ -24,8 +100,8 @@ export function ProfilePage() {
               <div className="w-20 h-20 bg-pink-100 rounded-full mx-auto mb-3 flex items-center justify-center">
                 <User className="w-10 h-10 text-pink-600" />
               </div>
-              <h2 className="font-semibold text-gray-900">John Doe</h2>
-              <p className="text-sm text-gray-600">john.doe@example.com</p>
+              <h2 className="font-semibold text-gray-900">{fullName || "User"}</h2>
+              <p className="text-sm text-gray-600">{email || "No email"}</p>
             </div>
 
             <nav className="space-y-1">
@@ -34,7 +110,7 @@ export function ProfilePage() {
                 return (
                   <button
                     key={item.id}
-                    onClick={() => setActiveTab(item.id)}
+                    onClick={() => handleMenuClick(item.id)}
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                       activeTab === item.id
                         ? "bg-pink-50 text-pink-600 font-medium"
@@ -50,214 +126,156 @@ export function ProfilePage() {
           </aside>
 
           <main className="lg:col-span-3 bg-white rounded-lg shadow-md p-8">
-            {activeTab === "profile" && (
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">Personal Information</h2>
-                <form className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        First Name
-                      </label>
-                      <input
-                        type="text"
-                        defaultValue="John"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Last Name
-                      </label>
-                      <input
-                        type="text"
-                        defaultValue="Doe"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Email Address
-                    </label>
-                    <input
-                      type="email"
-                      defaultValue="john.doe@example.com"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Phone Number
-                    </label>
-                    <input
-                      type="tel"
-                      defaultValue="+84 123 456 789"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Date of Birth
-                    </label>
-                    <input
-                      type="date"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
-                    />
-                  </div>
-                  <div className="pt-4">
-                    <button
-                      type="submit"
-                      className="bg-pink-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-pink-700 transition-colors"
-                    >
-                      Save Changes
-                    </button>
-                  </div>
-                </form>
-              </div>
-            )}
-
-            {activeTab === "orders" && (
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">My Orders</h2>
-                <div className="space-y-4">
-                  {[1, 2, 3].map((order) => (
-                    <div key={order} className="border border-gray-200 rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <div>
-                          <p className="font-semibold text-gray-900">Order #ORD-2026-{order}0234</p>
-                          <p className="text-sm text-gray-600">Placed on April {20 + order}, 2026</p>
-                        </div>
-                        <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                          Delivered
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-4 mb-3">
-                        <img
-                          src={`https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=80&h=80&fit=crop`}
-                          alt="Product"
-                          className="w-16 h-16 rounded object-cover"
-                        />
-                        <div className="flex-1">
-                          <p className="font-medium text-gray-900">Elegant Floral Maxi Dress</p>
-                          <p className="text-sm text-gray-600">Quantity: 1</p>
-                        </div>
-                        <p className="font-semibold text-gray-900">$89.99</p>
-                      </div>
-                      <div className="flex gap-3">
-                        <button className="flex-1 border border-indigo-600 text-pink-600 px-4 py-2 rounded-lg hover:bg-pink-50 transition-colors">
-                          View Details
-                        </button>
-                        <button className="flex-1 bg-pink-600 text-white px-4 py-2 rounded-lg hover:bg-pink-700 transition-colors">
-                          Buy Again
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {activeTab === "wishlist" && (
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">My Wishlist</h2>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">
+                {activeTab === "profile"
+                  ? "Personal Information"
+                  : menuItems.find((item) => item.id === activeTab)?.label}
+              </h2>
+              {activeTab === "profile" ? (
+                <form
+                  className="space-y-4"
+                  onSubmit={handleSaveProfile}
+                >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {[1, 2, 3, 4].map((item) => (
-                    <div key={item} className="border border-gray-200 rounded-lg p-4 flex gap-4">
-                      <img
-                        src={`https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=100&h=100&fit=crop`}
-                        alt="Product"
-                        className="w-24 h-24 rounded object-cover"
-                      />
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900 mb-1">Designer Leather Handbag</h3>
-                        <p className="text-lg font-bold text-pink-600 mb-2">$199.99</p>
-                        <button className="bg-pink-600 text-white px-4 py-1 rounded text-sm hover:bg-pink-700">
-                          Add to Cart
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {activeTab === "addresses" && (
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">Saved Addresses</h2>
-                <div className="space-y-4">
-                  <div className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <span className="bg-pink-100 text-indigo-800 px-2 py-1 rounded text-xs font-medium">
-                          Default
-                        </span>
-                        <p className="font-semibold text-gray-900 mt-2">Home</p>
-                        <p className="text-gray-600 mt-1">
-                          123 Main Street, Apartment 4B<br />
-                          District 1, Ho Chi Minh City<br />
-                          Vietnam - 70000
-                        </p>
-                        <p className="text-gray-600 mt-2">Phone: +84 123 456 789</p>
-                      </div>
-                      <div className="flex gap-2">
-                        <button className="text-pink-600 hover:underline text-sm">Edit</button>
-                        <button className="text-red-600 hover:underline text-sm">Delete</button>
-                      </div>
-                    </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      First Name
+                    </label>
+                    <input
+                      type="text"
+                      value={firstName}
+                      onChange={(e) => {
+                        const nextFirst = e.target.value.trim();
+                        const nextName = [nextFirst, lastName].filter(Boolean).join(" ");
+                        setFullName(nextName);
+                      }}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+                    />
                   </div>
-                  <button className="w-full border-2 border-dashed border-gray-300 rounded-lg p-4 text-pink-600 hover:border-indigo-600 transition-colors">
-                    + Add New Address
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Last Name
+                    </label>
+                    <input
+                      type="text"
+                      value={lastName}
+                      onChange={(e) => {
+                        const nextLast = e.target.value.trim();
+                        const nextName = [firstName, nextLast].filter(Boolean).join(" ");
+                        setFullName(nextName);
+                      }}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    value={email}
+                    readOnly
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Phone Number
+                  </label>
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+                  />
+                </div>
+                <div className="pt-4">
+                  <button
+                    type="submit"
+                    className="bg-pink-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-pink-700 transition-colors"
+                  >
+                    Save Changes
                   </button>
                 </div>
-              </div>
-            )}
-
-            {activeTab === "security" && (
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">Security Settings</h2>
-                <form className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Current Password
-                    </label>
-                    <input
-                      type="password"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
-                      placeholder="Enter current password"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      New Password
-                    </label>
-                    <input
-                      type="password"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
-                      placeholder="Enter new password"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Confirm New Password
-                    </label>
-                    <input
-                      type="password"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
-                      placeholder="Confirm new password"
-                    />
-                  </div>
-                  <div className="pt-4">
-                    <button
-                      type="submit"
-                      className="bg-pink-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-pink-700 transition-colors"
-                    >
-                      Update Password
-                    </button>
-                  </div>
                 </form>
-              </div>
-            )}
+              ) : activeTab === "orders" ? (
+                <div className="space-y-4">
+                  {orders.length > 0 ? (
+                    orders.map((order) => (
+                      <article key={order.id} className="border border-gray-200 rounded-lg p-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+                          <div>
+                            <p className="font-semibold text-gray-900">{order.order_no}</p>
+                            <p className="text-sm text-gray-600">
+                              {new Date(order.created_at).toLocaleString()}
+                            </p>
+                          </div>
+                          <span className="inline-flex items-center rounded-full bg-pink-100 text-pink-700 px-3 py-1 text-sm font-medium">
+                            {order.status}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm text-gray-700">
+                          <div>
+                            <p className="text-gray-500">Subtotal</p>
+                            <p className="font-medium">${order.subtotal.toFixed(2)}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-500">Shipping</p>
+                            <p className="font-medium">${order.shipping.toFixed(2)}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-500">Tax</p>
+                            <p className="font-medium">${order.tax.toFixed(2)}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-500">Total</p>
+                            <p className="font-semibold text-pink-600">${order.total.toFixed(2)}</p>
+                          </div>
+                        </div>
+                      </article>
+                    ))
+                  ) : (
+                    <p className="text-gray-600">You do not have any orders yet.</p>
+                  )}
+                </div>
+              ) : activeTab === "wishlist" ? (
+                <div className="space-y-4">
+                  {wishlistItems.length > 0 ? (
+                    wishlistItems.map((item) => (
+                      <article key={item.product_id} className="border border-gray-200 rounded-lg p-4 flex gap-4 items-center">
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="w-24 h-24 rounded object-cover"
+                        />
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-gray-900">{item.name}</h3>
+                          <p className="text-pink-600 font-bold mt-1">${item.price.toFixed(2)}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            await removeFromWishlist(item.product_id);
+                            setWishlistItems((prev) => prev.filter((wishlistItem) => wishlistItem.product_id !== item.product_id));
+                          }}
+                          className="text-sm text-red-600 hover:underline"
+                        >
+                          Remove
+                        </button>
+                      </article>
+                    ))
+                  ) : (
+                    <p className="text-gray-600">Your wishlist is empty.</p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-gray-600">
+                  This section is ready. Connect it to backend data when API is available.
+                </p>
+              )}
+            </div>
           </main>
         </div>
       </div>
