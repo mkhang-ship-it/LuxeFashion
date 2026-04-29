@@ -35,6 +35,12 @@ class ProductController extends Controller
             'price' => 399000,
             'image' => 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=500&h=500&fit=crop',
         ],
+        [
+            'id' => 9,
+            'name' => 'Luxury Satin Blouse',
+            'price' => 329000,
+            'image' => 'https://source.unsplash.com/featured/500x500?women,blouse,elegant,luxury',
+        ],
     ];
 
     public function index()
