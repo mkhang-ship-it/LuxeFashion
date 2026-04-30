@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Search, ShoppingCart, User, Heart, Menu, X } from "lucide-react";
-import { getCart, getWishlist, logout } from "../services/api";
+import { getCart, getCurrentUser, getWishlist, logout } from "../services/api";
 
 export function Header() {
   const navigate = useNavigate();
@@ -11,6 +11,7 @@ export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
   const [wishlistCount, setWishlistCount] = useState(0);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const refreshCartCount = () => {
     getCart()
@@ -33,12 +34,14 @@ export function Header() {
     const query = new URLSearchParams(location.search).get("q") || "";
     setSearchText(query);
     setIsLoggedIn(Boolean(localStorage.getItem("auth_token")));
+    setIsAdmin(Boolean(getCurrentUser()?.is_admin));
     refreshCartCount();
     refreshWishlistCount();
   }, [location.search]);
 
   useEffect(() => {
     setIsLoggedIn(Boolean(localStorage.getItem("auth_token")));
+    setIsAdmin(Boolean(getCurrentUser()?.is_admin));
     setMobileOpen(false);
     refreshCartCount();
     refreshWishlistCount();
@@ -91,6 +94,11 @@ export function Header() {
           <nav className="hidden md:flex items-center gap-6">
             {isLoggedIn ? (
               <>
+                {isAdmin && (
+                  <Link to="/admin" className="flex items-center gap-2 text-gray-700 hover:text-pink-600">
+                    <span>Admin</span>
+                  </Link>
+                )}
                 <Link to="/profile" className="flex items-center gap-2 text-gray-700 hover:text-pink-600">
                   <User className="w-5 h-5" />
                   <span>Profile</span>
@@ -143,7 +151,10 @@ export function Header() {
           <Link to="/cart" className="text-gray-700 hover:text-pink-600">Cart</Link>
           <Link to="/profile?tab=wishlist" className="text-gray-700 hover:text-pink-600">Wishlist</Link>
           {isLoggedIn ? (
-            <Link to="/profile" className="text-gray-700 hover:text-pink-600">Profile</Link>
+            <>
+              {isAdmin && <Link to="/admin" className="text-gray-700 hover:text-pink-600">Admin</Link>}
+              <Link to="/profile" className="text-gray-700 hover:text-pink-600">Profile</Link>
+            </>
           ) : (
             <>
               <Link to="/login" className="text-gray-700 hover:text-pink-600">Login</Link>
@@ -173,6 +184,7 @@ export function Header() {
               <Link to="/profile?tab=wishlist" className="text-gray-700 hover:text-pink-600">Wishlist</Link>
               {isLoggedIn ? (
                 <>
+                  {isAdmin && <Link to="/admin" className="text-gray-700 hover:text-pink-600">Admin</Link>}
                   <Link to="/profile" className="text-gray-700 hover:text-pink-600">Profile</Link>
                   <button type="button" onClick={handleLogout} className="text-left text-gray-700 hover:text-pink-600">Logout</button>
                 </>

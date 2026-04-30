@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 
 class AuthController extends Controller
 {
@@ -31,6 +32,7 @@ class AuthController extends Controller
                 'full_name' => $user['name'],
                 'email' => $user['email'],
                 'phone' => $user['phone'],
+                'is_admin' => (bool) $user['is_admin'],
             ],
         ], 201);
     }
@@ -49,6 +51,8 @@ class AuthController extends Controller
             ], 401);
         }
 
+        $this->bootstrapFirstAdmin($user);
+
         $token = $user->createToken('webfashion-token')->plainTextToken;
 
         return response()->json([
@@ -59,6 +63,7 @@ class AuthController extends Controller
                 'full_name' => $user['name'],
                 'email' => $user['email'],
                 'phone' => $user['phone'],
+                'is_admin' => (bool) $user['is_admin'],
             ],
         ]);
     }
@@ -68,12 +73,16 @@ class AuthController extends Controller
         $user = $request->user();
         if (!$user) return response()->json(['message' => 'Unauthorized'], 401);
 
+        $this->bootstrapFirstAdmin($user);
+        $user->refresh();
+
         return response()->json([
             'data' => [
                 'id' => $user['id'],
                 'full_name' => $user['name'],
                 'email' => $user['email'],
                 'phone' => $user['phone'],
+                'is_admin' => (bool) $user['is_admin'],
             ],
         ]);
     }
@@ -82,6 +91,8 @@ class AuthController extends Controller
     {
         $user = $request->user();
         if (!$user) return response()->json(['message' => 'Unauthorized'], 401);
+
+        $this->bootstrapFirstAdmin($user);
 
         $validated = $request->validate([
             'full_name' => ['required', 'string', 'max:100'],
@@ -99,6 +110,7 @@ class AuthController extends Controller
                 'full_name' => $user['name'],
                 'email' => $user['email'],
                 'phone' => $user['phone'],
+                'is_admin' => (bool) $user['is_admin'],
             ],
         ]);
     }
@@ -143,6 +155,15 @@ class AuthController extends Controller
         return response()->json([
             'data' => $orders,
         ]);
+    }
+
+    private function bootstrapFirstAdmin(User $user): void
+    {
+        $hasAdmin = DB::table('users')->where('is_admin', true)->exists();
+        if (!$hasAdmin && !$user->is_admin) {
+            $user->is_admin = true;
+            $user->save();
+        }
     }
 }
 

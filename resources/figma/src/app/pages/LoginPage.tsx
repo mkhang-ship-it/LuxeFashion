@@ -29,8 +29,8 @@ export function LoginPage() {
 
     setErrors({});
     try {
-      await login({ email, password });
-      navigate("/profile");
+      const user = await login({ email, password });
+      navigate(user.is_admin ? "/admin" : "/profile");
     } catch (error) {
       setErrors({
         form: error instanceof Error ? error.message : "Login failed.",

@@ -12,6 +12,7 @@ export type UserProfile = {
   full_name: string
   email: string
   phone: string
+  is_admin?: boolean
 }
 
 export type CartItem = {
@@ -52,6 +53,37 @@ export type WishlistItem = {
   name: string
   price: number
   image: string
+}
+
+export type AdminDashboard = {
+  users: number
+  admins: number
+  orders: number
+  pending_orders: number
+  revenue: number
+}
+
+export type AdminUser = {
+  id: number
+  full_name: string
+  email: string
+  phone: string
+  is_admin: boolean
+  created_at: string
+}
+
+export type AdminOrder = {
+  id: number
+  order_no: string
+  status: string
+  subtotal: number
+  shipping: number
+  tax: number
+  discount: number
+  total: number
+  created_at: string
+  customer_name: string
+  customer_email?: string | null
 }
 
 const BASE_URL = import.meta.env.VITE_API_URL || "/api"
@@ -171,6 +203,7 @@ export async function login(payload: { email: string; password: string }): Promi
   const json = await res.json()
   if (!res.ok) throw new Error(json?.message || "Login failed")
   if (json?.token) localStorage.setItem("auth_token", json.token)
+  if (json?.data) setCurrentUser(json.data as UserProfile)
   emitCartUpdated()
   return json?.data as UserProfile
 }
@@ -184,6 +217,7 @@ export async function getProfile(): Promise<UserProfile> {
   })
   const json = await res.json()
   if (!res.ok) throw new Error(json?.message || "Get profile failed")
+  setCurrentUser(json?.data as UserProfile)
   return json?.data as UserProfile
 }
 
@@ -204,6 +238,7 @@ export async function updateProfile(payload: {
   })
   const json = await res.json()
   if (!res.ok) throw new Error(json?.message || "Update profile failed")
+  setCurrentUser(json?.data as UserProfile)
   return json?.data as UserProfile
 }
 
@@ -216,7 +251,76 @@ export async function logout(): Promise<void> {
     headers: { Authorization: `Bearer ${token}` },
   })
   localStorage.removeItem("auth_token")
+  clearCurrentUser()
   emitCartUpdated()
+}
+
+export async function getAdminDashboard(): Promise<AdminDashboard> {
+  const token = getAuthToken()
+  if (!token) throw new Error("Not logged in")
+
+  const res = await fetch(`${BASE_URL}/admin/dashboard`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  const json = await res.json()
+  if (!res.ok) throw new Error(json?.message || "Get admin dashboard failed")
+  return json?.data as AdminDashboard
+}
+
+export async function getAdminUsers(): Promise<AdminUser[]> {
+  const token = getAuthToken()
+  if (!token) throw new Error("Not logged in")
+
+  const res = await fetch(`${BASE_URL}/admin/users`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  const json = await res.json()
+  if (!res.ok) throw new Error(json?.message || "Get users failed")
+  return (json?.data || []) as AdminUser[]
+}
+
+export async function setAdminRole(userId: number, isAdmin: boolean): Promise<void> {
+  const token = getAuthToken()
+  if (!token) throw new Error("Not logged in")
+
+  const res = await fetch(`${BASE_URL}/admin/users/${userId}/role`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ is_admin: isAdmin }),
+  })
+  const json = await res.json()
+  if (!res.ok) throw new Error(json?.message || "Update role failed")
+}
+
+export async function getAdminOrders(): Promise<AdminOrder[]> {
+  const token = getAuthToken()
+  if (!token) throw new Error("Not logged in")
+
+  const res = await fetch(`${BASE_URL}/admin/orders`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  const json = await res.json()
+  if (!res.ok) throw new Error(json?.message || "Get admin orders failed")
+  return (json?.data || []) as AdminOrder[]
+}
+
+export async function updateAdminOrderStatus(orderId: number, status: string): Promise<void> {
+  const token = getAuthToken()
+  if (!token) throw new Error("Not logged in")
+
+  const res = await fetch(`${BASE_URL}/admin/orders/${orderId}/status`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ status }),
+  })
+  const json = await res.json()
+  if (!res.ok) throw new Error(json?.message || "Update order status failed")
 }
 
 export async function checkout(discount = 0): Promise<CheckoutResult> {
@@ -300,6 +404,25 @@ function getCartId(): string | null {
 
 function getAuthToken(): string | null {
   return localStorage.getItem("auth_token")
+}
+
+export function getCurrentUser(): UserProfile | null {
+  const raw = localStorage.getItem("auth_user")
+  if (!raw) return null
+
+  try {
+    return JSON.parse(raw) as UserProfile
+  } catch {
+    return null
+  }
+}
+
+function setCurrentUser(user: UserProfile): void {
+  localStorage.setItem("auth_user", JSON.stringify(user))
+}
+
+function clearCurrentUser(): void {
+  localStorage.removeItem("auth_user")
 }
 
 function getAuthHeader(): Record<string, string> {

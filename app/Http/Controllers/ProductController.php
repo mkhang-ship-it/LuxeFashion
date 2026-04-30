@@ -20,25 +20,25 @@ class ProductController extends Controller
         [
             'id' => 1,
             'name' => 'Luxe Dress',
-            'price' => 499000,
+            'price' => 100,
             'image' => 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=500&h=500&fit=crop',
         ],
         [
             'id' => 2,
             'name' => 'Pink Blouse',
-            'price' => 259000,
+            'price' => 250,
             'image' => 'https://images.unsplash.com/photo-1618932260643-eee4a2f652a6?w=500&h=500&fit=crop',
         ],
         [
             'id' => 3,
             'name' => 'Classic Jeans',
-            'price' => 399000,
+            'price' => 50,
             'image' => 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=500&h=500&fit=crop',
         ],
         [
             'id' => 9,
             'name' => 'Luxury Satin Blouse',
-            'price' => 329000,
+            'price' => 329,
             'image' => 'https://source.unsplash.com/featured/500x500?women,blouse,elegant,luxury',
         ],
     ];

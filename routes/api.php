@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\AdminController;
 
 Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/{id}', [ProductController::class, 'show']);
@@ -23,6 +24,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/wishlist', [ProductController::class, 'getWishlist']);
     Route::post('/wishlist', [ProductController::class, 'addToWishlist']);
     Route::delete('/wishlist/{productId}', [ProductController::class, 'removeFromWishlist']);
+});
+
+Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {
+    Route::get('/dashboard', [AdminController::class, 'dashboard']);
+    Route::get('/users', [AdminController::class, 'users']);
+    Route::patch('/users/{userId}/role', [AdminController::class, 'setAdminRole']);
+    Route::get('/orders', [AdminController::class, 'orders']);
+    Route::patch('/orders/{orderId}/status', [AdminController::class, 'updateOrderStatus']);
 });
 
 /*
