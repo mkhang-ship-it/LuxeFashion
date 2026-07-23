@@ -1,0 +1,5 @@
+{
+  "php": {
+    "extensions": ["pdo_mysql", "mysqli", "mbstring", "tokenizer", "xml", "ctype", "json", "bcmath", "openssl", "fileinfo"]
+  }
+}
