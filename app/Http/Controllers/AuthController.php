@@ -23,6 +23,7 @@ class AuthController extends Controller
             'email' => $validated['email'],
             'phone' => $validated['phone'],
             'password' => Hash::make($validated['password']),
+            'is_admin' => false,
         ]);
 
         return response()->json([
