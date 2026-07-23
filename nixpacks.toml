@@ -1,0 +1,4 @@
+providers = ["php"]
+
+[phases.setup]
+nixPkgs = ["...", "php", "php82.extensions.mysqli", "php82.extensions.pdo_mysql"]
