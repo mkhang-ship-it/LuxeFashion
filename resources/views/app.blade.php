@@ -19,21 +19,9 @@
         <script type="module" src="{{ $figmaDevServer }}/@@vite/client"></script>
         <script type="module" src="{{ $figmaDevServer }}/src/main.tsx"></script>
     @else
-        @php
-            $manifestPath = public_path('build/.vite/manifest.json');
-            $manifest = file_exists($manifestPath) ? json_decode(file_get_contents($manifestPath), true) : null;
-            $entry = is_array($manifest) ? ($manifest['index.html'] ?? null) : null;
-        @endphp
-
-        @if (is_array($entry) && !empty($entry['css']))
-            @foreach ($entry['css'] as $cssFile)
-                <link rel="stylesheet" href="{{ asset('build/' . $cssFile) }}">
-            @endforeach
-        @endif
-
-        @if (is_array($entry) && !empty($entry['file']))
-            <script type="module" src="{{ asset('build/' . $entry['file']) }}"></script>
-        @endif
+        {{-- Vite build outputs fixed filenames (see resources/figma/vite.config.ts) --}}
+        <link rel="stylesheet" href="{{ asset('build/assets/main.css') }}">
+        <script type="module" src="{{ asset('build/assets/main.js') }}"></script>
     @endif
 </head>
 <body>
