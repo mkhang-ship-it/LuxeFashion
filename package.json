@@ -2,5 +2,8 @@
   "private": true,
   "scripts": {
     "build": "npm ci --prefix resources/figma && npm run build --prefix resources/figma"
+  },
+  "engines": {
+    "node": "20.x"
   }
 }
